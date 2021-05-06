@@ -34,7 +34,7 @@ jobs:
       with:
         file: src/integrationtest/.mocharc.json
         field: ledgerPrefix
-        value: ${{ matrix.python-version }}-${{ matrix.os }}
+        value: ${{ matrix.node-version }}-${{ matrix.os }}
         
     - name: Install dependencies
       run: npm install
