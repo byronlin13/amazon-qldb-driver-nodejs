@@ -17,10 +17,11 @@ import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import { dom } from "ion-js";
 
-import { defaultRetryConfig } from "../retry/DefaultRetryConfig";
 import { isTransactionExpiredException, DriverClosedError, SessionPoolEmptyError } from "../errors/Errors";
+import * as mocharc from './.mocharc.json';
 import { QldbDriver } from "../QldbDriver";
 import { Result } from "../Result";
+import { defaultRetryConfig } from "../retry/DefaultRetryConfig";
 import { RetryConfig } from "../retry/RetryConfig";
 import { TransactionExecutor } from "../TransactionExecutor";
 import * as constants from "./TestConstants";
@@ -32,16 +33,17 @@ describe("SessionManagement", function() {
     this.timeout(0);
     let testUtils: TestUtils;
     let config: ClientConfiguration; 
+    const ledgerName: string = mocharc.ledgerPrefix + constants.LEDGER_NAME;
 
     before(async () => {
-        testUtils = new TestUtils(constants.LEDGER_NAME);
+        testUtils = new TestUtils(ledgerName);
         config = testUtils.createClientConfiguration();
 
         await testUtils.runForceDeleteLedger();
         await testUtils.runCreateLedger();
 
         // Create table
-        const driver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, config);
+        const driver: QldbDriver = new QldbDriver(ledgerName, config);
         const statement: string = `CREATE TABLE ${constants.TABLE_NAME}`;
         const count: number = await driver.executeLambda(async (txn: TransactionExecutor): Promise<number> => {
             const result: Result = await txn.execute(statement);
@@ -73,7 +75,7 @@ describe("SessionManagement", function() {
     it("Can get a session when the pool has no sessions and hasn't hit the pool limit", async () => {
         // Start a pooled driver with default pool limit so it doesn't have sessions in the pool
         // and has not hit the limit
-        const driver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, config);
+        const driver: QldbDriver = new QldbDriver(ledgerName, config);
         try {
             // Execute a statement to implicitly create a session and return it to the pool
             await driver.executeLambda(async (txn: TransactionExecutor) => {
@@ -86,7 +88,7 @@ describe("SessionManagement", function() {
 
     it("Throws exception when all the sessions are busy and pool limit is reached", async () => {
         // Set maxConcurrentTransactions to 1
-        const driver: QldbDriver = new  QldbDriver(constants.LEDGER_NAME, config, 1, defaultRetryConfig);
+        const driver: QldbDriver = new  QldbDriver(ledgerName, config, 1, defaultRetryConfig);
         try {
             // Execute and do not wait for the promise to resolve, exhausting the pool
             driver.executeLambda(async (txn: TransactionExecutor) => {
@@ -107,7 +109,7 @@ describe("SessionManagement", function() {
     });
 
     it("Throws exception when the driver has been closed", async () => {
-        const driver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, config);
+        const driver: QldbDriver = new QldbDriver(ledgerName, config);
         driver.close();
         try {
             await driver.executeLambda(async (txn: TransactionExecutor) => {
@@ -121,7 +123,7 @@ describe("SessionManagement", function() {
     });
 
     it("Throws exception when transaction expires due to timeout", async () => {
-        const driver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, config);
+        const driver: QldbDriver = new QldbDriver(ledgerName, config);
         let error;
         try {
             error = await chai.expect(driver.executeLambda(async (txn: TransactionExecutor) => {
@@ -134,7 +136,7 @@ describe("SessionManagement", function() {
     });
 
     it("Properly cleans the transaction state and does not abort it in the middle of a transaction", async () => {
-        const driver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, config, 1);
+        const driver: QldbDriver = new QldbDriver(ledgerName, config, 1);
 
         const noDelayConfig: RetryConfig = new RetryConfig(Number.MAX_VALUE, () => 0);
 

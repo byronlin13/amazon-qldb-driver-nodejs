@@ -14,9 +14,10 @@
 import { AWSError } from "aws-sdk";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
-import { dom, IonType } from "ion-js";
+import { dom } from "ion-js";
 
 import { isOccConflictException } from "../errors/Errors";
+import * as mocharc from './.mocharc.json';
 import { QldbDriver } from "../QldbDriver";
 import { Result } from "../Result";
 import { ResultReadable } from "../ResultReadable";
@@ -34,14 +35,15 @@ describe("StatementExecution", function() {
     this.timeout(0);
     let testUtils: TestUtils; 
     let driver: QldbDriver;
+    const ledgerName: string = mocharc.ledgerPrefix + constants.LEDGER_NAME;
 
     before(async () => {
-        testUtils = new TestUtils(constants.LEDGER_NAME);
+        testUtils = new TestUtils(ledgerName);
 
         await testUtils.runForceDeleteLedger();
         await testUtils.runCreateLedger();
 
-        driver = new QldbDriver(constants.LEDGER_NAME, testUtils.createClientConfiguration());
+        driver = new QldbDriver(ledgerName, testUtils.createClientConfiguration());
 
         // Create table
         const statement: string = `CREATE TABLE ${constants.TABLE_NAME}`;
@@ -300,7 +302,7 @@ describe("StatementExecution", function() {
         
         // Create a driver that does not retry OCC errors
         const retryConfig: RetryConfig = new RetryConfig(0);
-        const noRetryDriver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, testUtils.createClientConfiguration(), 3, retryConfig);
+        const noRetryDriver: QldbDriver = new QldbDriver(ledgerName, testUtils.createClientConfiguration(), 3, retryConfig);
         async function updateField(driver: QldbDriver): Promise<void> {
             await driver.executeLambda(async (txn: TransactionExecutor) => {
                 let currentValue: number;
